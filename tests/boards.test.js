@@ -1,7 +1,8 @@
 const request = require('supertest');
+const { ObjectId } = require('mongoose').Types;
+const { Board } = require('../models/board');
 
 let server;
-const { Board } = require('../models/board');
 
 describe('/api/boards', () => {
   beforeEach(() => {
@@ -43,9 +44,7 @@ describe('/api/boards', () => {
     });
 
     it('should return 404 if the board with the given ID was not found', async () => {
-      const res = await request(server).get(
-        '/api/boards/5db9e394210107700dd5239d'
-      );
+      const res = await request(server).get(`/api/boards/${new ObjectId()}`);
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The board with the given ID was not found.');
@@ -59,6 +58,7 @@ describe('/api/boards', () => {
         .send({ name: 'Board 1' });
 
       expect(res.status).toBe(201);
+      expect(res.body._id).toBeDefined();
       expect(res.body.name).toBe('Board 1');
     });
 
@@ -96,8 +96,11 @@ describe('/api/boards', () => {
 
     it('should return 404 if the board with the given ID was not found', async () => {
       const res = await request(server)
-        .put('/api/boards/5db9e394210107700dd5239d')
+        .put(`/api/boards/${new ObjectId()}`)
         .send({ name: 'Updated Board' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('The board with the given ID was not found.');
     });
 
     it('should return 400 if the name field is not specified', async () => {
@@ -129,9 +132,10 @@ describe('/api/boards', () => {
     });
 
     it('should return 404 if the board with the given ID was not found', async () => {
-      const res = await request(server).delete(
-        '/api/boards/5db9e394210107700dd5239d'
-      );
+      const res = await request(server).delete(`/api/boards/${ObjectId()}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('The board with the given ID was not found.');
     });
   });
 });
