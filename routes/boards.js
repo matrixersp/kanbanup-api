@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const validateObjectId = require('../middleware/validateObjectId');
-const { Board, validate } = require('../models/board');
+const { Board, validateBoard } = require('../models/board');
 
 router.get('/', async (req, res) => {
   const boards = await Board.find().select('-__v');
@@ -20,21 +20,21 @@ router.get('/:id', validateObjectId, async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { error } = validate(req.body);
+  const { error } = validateBoard(req.body);
   if (error) {
     const errors = [];
     error.details.forEach(d => errors.push({ error: d.message }));
     return res.status(400).json({ errors });
   }
 
-  const board = new Board({ name: req.body.name });
+  const board = new Board({ title: req.body.title });
   await board.save();
 
   res.status(201).json(board);
 });
 
 router.put('/:id', validateObjectId, async (req, res) => {
-  const { error } = validate(req.body);
+  const { error } = validateBoard(req.body);
   if (error) {
     const errors = [];
     error.details.forEach(d => errors.push({ error: d.message }));
@@ -43,7 +43,7 @@ router.put('/:id', validateObjectId, async (req, res) => {
 
   const board = await Board.findByIdAndUpdate(
     req.params.id,
-    { name: req.body.name },
+    { title: req.body.title },
     { new: true }
   );
   if (!board)
