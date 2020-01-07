@@ -58,6 +58,15 @@ describe('/api/lists', () => {
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The board with the given ID was not found.');
     });
+
+    it('should return 404 if board ID is not passed', async () => {
+      const res = await request(server)
+        .post('/api/lists')
+        .send({ title: 'List 1' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Board ID is required.');
+    });
   });
 
   describe('PUT /:id', () => {
@@ -87,6 +96,15 @@ describe('/api/lists', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Board ID is not valid.');
+    });
+
+    it('should return 404 if board ID is not passed', async () => {
+      const res = await request(server)
+        .put(`/api/lists/${listId}`)
+        .send({ title: 'Updated List' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Board ID is required.');
     });
 
     it('should return 404 if the list with the given ID was not found', async () => {
@@ -132,10 +150,19 @@ describe('/api/lists', () => {
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
         .delete(`/api/lists/${listId}`)
-        .send({ title: 'Updated List', boardId: '1' });
+        .send({ boardId: '1' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Board ID is not valid.');
+    });
+
+    it('should return 404 if board ID is not passed', async () => {
+      const res = await request(server)
+        .delete(`/api/lists/${listId}`)
+        .send();
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Board ID is required.');
     });
 
     it('should return 404 if the list with the given ID was not found', async () => {

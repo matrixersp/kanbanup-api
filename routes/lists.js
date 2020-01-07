@@ -2,10 +2,11 @@ const express = require('express');
 
 const router = express.Router();
 const validateObjectId = require('../middleware/validateObjectId');
+const validateBoardId = require('../middleware/validateBoardId');
 
 const { Board, List, validateList } = require('../models/board');
 
-router.post('/', validateObjectId, async (req, res) => {
+router.post('/', validateBoardId, async (req, res) => {
   const { error } = validateList(req.body);
   if (error) {
     const errors = [];
@@ -31,7 +32,7 @@ router.post('/', validateObjectId, async (req, res) => {
   return res.status(201).json(board.lists[board.lists.length - 1]);
 });
 
-router.put('/:id', validateObjectId, async (req, res) => {
+router.put('/:id', validateObjectId, validateBoardId, async (req, res) => {
   const { error } = validateList(req.body);
   if (error) {
     const errors = [];
@@ -55,7 +56,7 @@ router.put('/:id', validateObjectId, async (req, res) => {
   res.status(200).json(list);
 });
 
-router.delete('/:id', validateObjectId, async (req, res) => {
+router.delete('/:id', validateObjectId, validateBoardId, async (req, res) => {
   const board = await Board.findById(req.body.boardId);
 
   if (!board)

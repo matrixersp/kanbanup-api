@@ -2,10 +2,12 @@ const express = require('express');
 const { Card, validateCard } = require('../models/card');
 const { Board } = require('../models/board');
 const validateObjectId = require('../middleware/validateObjectId');
+const validateBoardId = require('../middleware/validateBoardId');
+const validateListId = require('../middleware/validateListId');
 
 const router = express.Router();
 
-router.get('/', validateObjectId, async (req, res) => {
+router.get('/', validateBoardId, async (req, res) => {
   const cards = await Card.find({ boardId: req.body.boardId });
   return res.status(200).json(cards);
 });
@@ -19,7 +21,7 @@ router.get('/:id', validateObjectId, async (req, res) => {
   return res.status(200).json(card);
 });
 
-router.post('/', validateObjectId, async (req, res) => {
+router.post('/', validateBoardId, validateListId, async (req, res) => {
   const { error } = validateCard(req.body);
   if (error) {
     const errors = [];

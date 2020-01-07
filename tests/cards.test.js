@@ -49,6 +49,15 @@ describe('/api/cards', () => {
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Board ID is not valid.');
     });
+
+    it('should return 404 if board ID is not passed', async () => {
+      const res = await request(server)
+        .get('/api/cards')
+        .send();
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Board ID is required.');
+    });
   });
 
   describe('GET /:id', () => {
@@ -125,6 +134,24 @@ describe('/api/cards', () => {
       expect(res.body.error).toBe('List ID is not valid.');
     });
 
+    it('should return 404 if board ID is not passed', async () => {
+      const res = await request(server)
+        .post('/api/cards')
+        .send({ listId, title: 'Card 1' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Board ID is required.');
+    });
+
+    it('should return 404 if list ID is not passed', async () => {
+      const res = await request(server)
+        .post('/api/cards')
+        .send({ boardId, title: 'Card 1' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('List ID is required.');
+    });
+
     it('should return 400 if the title is not specified', async () => {
       const res = await request(server)
         .post('/api/cards')
@@ -197,6 +224,7 @@ describe('/api/cards', () => {
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('ID is not valid.');
     });
+
     it('should return 404 if the card with the given ID was not found', async () => {
       const res = await request(server).delete(`/api/cards/${new ObjectId()}`);
 
