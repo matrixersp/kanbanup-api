@@ -38,16 +38,19 @@ router.post('/', validateBoardId, validateListId, async (req, res) => {
       .status(404)
       .json({ error: 'The board with the given ID was not found.' });
 
-  const listIndex = board.lists.findIndex(l => l._id.toString() === listId);
+  const index = board.lists.findIndex(l => l._id.toString() === listId);
 
-  if (listIndex === -1)
+  if (index === -1)
     return res
       .status(404)
       .json({ error: 'The list with the given ID was not found.' });
 
   const card = new Card({ boardId, listId, title });
-
   await card.save();
+
+  board.lists[index].cards.push(card._id);
+  await board.save();
+
   return res.status(201).json(card);
 });
 
@@ -79,6 +82,16 @@ router.delete('/:id', validateObjectId, async (req, res) => {
     return res
       .status(404)
       .json({ error: 'The card with the given ID was not found.' });
+
+  await Board.findOneAndUpdate(
+    {
+      _id: card.boardId,
+      'lists._id': card.listId
+    },
+    {
+      $pull: { 'lists.$.cards': card._id }
+    }
+  );
 
   res.status(200).json({ message: 'The card was successfully deleted.' });
 });

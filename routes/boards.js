@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', validateObjectId, async (req, res) => {
-  const board = await Board.findById(req.params.id);
+  const board = await Board.findById(req.params.id).populate('lists.cards');
   if (!board)
     return res
       .status(404)
