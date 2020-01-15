@@ -33,7 +33,7 @@ describe('/api/cards', () => {
       ]);
       const res = await request(server)
         .get('/api/cards/')
-        .send({ boardId });
+        .query({ boardId: boardId.toString() });
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBeTruthy();
@@ -44,7 +44,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
         .get('/api/cards')
-        .send({ boardId: '1' });
+        .query({ boardId: '1' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Board ID is not valid.');
@@ -53,7 +53,7 @@ describe('/api/cards', () => {
     it('should return 404 if board ID is not passed', async () => {
       const res = await request(server)
         .get('/api/cards')
-        .send();
+        .query();
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Board ID is required.');
