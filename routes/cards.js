@@ -3,12 +3,13 @@ const { Card, validateCard } = require('../models/card');
 const { Board } = require('../models/board');
 const validateObjectId = require('../middleware/validateObjectId');
 const validateBoardId = require('../middleware/validateBoardId');
+const validateQueryBoardId = require('../middleware/validateQueryBoardId');
 const validateListId = require('../middleware/validateListId');
 
 const router = express.Router();
 
-router.get('/', validateBoardId, async (req, res) => {
-  const cards = await Card.find({ boardId: req.body.boardId });
+router.get('/', validateQueryBoardId, async (req, res) => {
+  const cards = await Card.find({ boardId: req.query.boardId });
   return res.status(200).json(cards);
 });
 
