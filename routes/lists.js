@@ -5,6 +5,7 @@ const validateObjectId = require('../middleware/validateObjectId');
 const validateBoardId = require('../middleware/validateBoardId');
 
 const { Board, List, validateList } = require('../models/board');
+const { Card } = require('../models/card');
 
 router.post('/', validateBoardId, async (req, res) => {
   const { error } = validateList(req.body);
@@ -70,10 +71,11 @@ router.delete('/:id', validateObjectId, validateBoardId, async (req, res) => {
     return res
       .status(404)
       .json({ error: 'The list with the given ID was not found.' });
-
+  const listId = board.lists[index];
   board.lists.splice(index, 1);
 
   await board.save();
+  await Card.deleteMany({ listId });
 
   res.status(200).json({ message: 'The list was successfully deleted.' });
 });
