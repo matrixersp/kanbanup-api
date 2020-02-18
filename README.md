@@ -1,17 +1,29 @@
-# Kanbored
+# Kanbored API
 
-Simple Kanban Board.
+A Kanban Board RESTful API.
 
-## Install Dependencies
+*__NOTE__: This app is still in its infancy, expect bugs large and small. If you spot a bug please report it by opening an issue.*
 
-```sh
-npm ci
-```
-
-**Note**: `npm ci` is available since npm@5.7
-
-## Run Server
+## Quick Start
 
 ```sh
+git clone git@github.com:matrixersp/kanbored-api.git
+cd kanbored-api
+cp .env.example .env
+npm install
 npm start
 ```
+
+### Run Tests
+
+```sh
+npm test
+```
+
+## Contribution
+
+Contributions are welcome and greatly appreciated, via issues and/or pull requests. Don't forget to leave a star!
+
+## License
+
+Licensed under the [MIT license](https://github.com/matrixersp/kanbored-api/blob/master/LICENSE).
