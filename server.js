@@ -9,6 +9,8 @@ const error = require('./middleware/error');
 const boards = require('./routes/boards');
 const lists = require('./routes/lists');
 const cards = require('./routes/cards');
+const users = require('./routes/users');
+const auth = require('./routes/auth');
 
 require('dotenv').config();
 
@@ -17,6 +19,7 @@ mongoose
   .connect(dbURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    useCreateIndex: true,
     useFindAndModify: false
   })
   .then(() => console.log(`MongoDB connected on ${dbURI}`))
@@ -30,6 +33,8 @@ app.use(morgan('tiny'));
 app.use('/api/boards', boards);
 app.use('/api/lists', lists);
 app.use('/api/cards', cards);
+app.use('/api/users', users);
+app.use('/api/auth', auth);
 app.use(error);
 
 const port = process.env.PORT || 5000;

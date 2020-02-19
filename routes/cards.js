@@ -1,5 +1,4 @@
 const express = require('express');
-const { ObjectId } = require('mongoose').Types;
 const { Card, validateCard } = require('../models/card');
 const { Board } = require('../models/board');
 const validateObjectId = require('../middleware/validateObjectId');
