@@ -2,9 +2,10 @@ const express = require('express');
 
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const auth = require('../middleware/auth');
 const { User, validateUser } = require('../models/user');
 
-router.get('/current', async (req, res) => {
+router.get('/current', auth, async (req, res) => {
   const user = await User.findById(req.user._id).select('-password -__v');
   return res.status(200).json(user);
 });
@@ -20,7 +21,7 @@ router.post('/', async (req, res) => {
   const { name, email, password } = req.body;
 
   let user = await User.findOne({ email });
-  if (user) res.status(400).json({ error: 'User already registered.' });
+  if (user) return res.status(400).json({ error: 'User already registered.' });
 
   const hash = await bcrypt.hash(password, 10);
 

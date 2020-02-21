@@ -1,6 +1,7 @@
 const express = require('express');
 const { Card, validateCard } = require('../models/card');
 const { Board } = require('../models/board');
+const auth = require('../middleware/auth');
 const validateObjectId = require('../middleware/validateObjectId');
 const validateBoardId = require('../middleware/validateBoardId');
 const validateQueryBoardId = require('../middleware/validateQueryBoardId');
@@ -8,21 +9,30 @@ const validateListId = require('../middleware/validateListId');
 
 const router = express.Router();
 
-router.get('/', validateQueryBoardId, async (req, res) => {
-  const cards = await Card.find({ boardId: req.query.boardId });
-  return res.status(200).json(cards);
-});
+router.get(
+  '/:id',
+  [auth, validateObjectId, validateQueryBoardId],
+  async (req, res) => {
+    const board = await Board.findOne({
+      _id: req.query.boardId,
+      participants: req.user._id
+    });
 
-router.get('/:id', validateObjectId, async (req, res) => {
-  const card = await Card.findById(req.params.id).select('-__v');
-  if (!card)
-    return res
-      .status(404)
-      .json({ error: 'The card with the given ID was not found.' });
-  return res.status(200).json(card);
-});
+    if (!board)
+      return res
+        .status(404)
+        .json({ error: 'The board with the given ID was not found.' });
 
-router.post('/', validateBoardId, validateListId, async (req, res) => {
+    const card = await Card.findById(req.params.id).select('-__v');
+    if (!card)
+      return res
+        .status(404)
+        .json({ error: 'The card with the given ID was not found.' });
+    return res.status(200).json(card);
+  }
+);
+
+router.post('/', [auth, validateBoardId, validateListId], async (req, res) => {
   const { error } = validateCard(req.body);
   if (error) {
     const errors = [];
@@ -31,7 +41,10 @@ router.post('/', validateBoardId, validateListId, async (req, res) => {
   }
 
   const { boardId, listId, title } = req.body;
-  const board = await Board.findById(boardId);
+  const board = await Board.findOne({
+    _id: boardId,
+    participants: req.user._id
+  });
 
   if (!board)
     return res
@@ -45,7 +58,7 @@ router.post('/', validateBoardId, validateListId, async (req, res) => {
       .status(404)
       .json({ error: 'The list with the given ID was not found.' });
 
-  const card = new Card({ boardId, listId, title });
+  const card = new Card({ title });
   await card.save();
 
   board.lists[index].cards.push(card._id);
@@ -54,14 +67,15 @@ router.post('/', validateBoardId, validateListId, async (req, res) => {
   return res.status(201).json(card);
 });
 
-async function moveCard(id, source, destination, res) {
-  const card = await Card.findById(id);
-  if (!card)
+async function moveCard(id, boardId, userId, source, destination, res) {
+  const board = await Board.findOne({
+    _id: boardId,
+    participants: userId
+  });
+  if (!board)
     return res
       .status(404)
-      .json({ error: 'The card with the given ID was not found.' });
-
-  const board = await Board.findById(card.boardId);
+      .json({ error: 'The board with the given ID was not found.' });
 
   const sourceList = board.lists.find(
     list => list._id.toString() === source.listId
@@ -69,22 +83,30 @@ async function moveCard(id, source, destination, res) {
   const destinationList = board.lists.find(
     list => list._id.toString() === destination.listId
   );
+
   if (!sourceList || !destinationList)
     return res
       .status(404)
       .json({ error: 'The source/destination list was not found.' });
 
   sourceList.cards.splice(source.index, 1);
-  destinationList.cards.splice(destination.index, 0, card._id);
+  destinationList.cards.splice(destination.index, 0, id);
 
-  card.listId = destination.listId;
   await board.save();
-  await card.save();
 
-  return res.status(200).json(card);
+  return res.status(204).send();
 }
 
-async function updateTitle(id, title, res) {
+async function updateTitle(id, boardId, userId, title, res) {
+  const board = await Board.findOne({
+    _id: boardId,
+    participants: userId
+  });
+  if (!board)
+    return res
+      .status(404)
+      .json({ error: 'The board with the given ID was not found.' });
+
   const query = id;
   const update = { $set: { title } };
   const options = { new: true };
@@ -99,7 +121,7 @@ async function updateTitle(id, title, res) {
   return res.status(200).json(card);
 }
 
-router.put('/:id', validateObjectId, async (req, res) => {
+router.patch('/:id', [auth, validateObjectId], async (req, res) => {
   const { error } = validateCard(req.body);
 
   if (error) {
@@ -109,31 +131,35 @@ router.put('/:id', validateObjectId, async (req, res) => {
   }
 
   const { id } = req.params;
-  const { source, destination, title } = req.body;
+  const { boardId, source, destination, title } = req.body;
 
   if (source) {
-    moveCard(id, source, destination, res);
+    moveCard(id, boardId, req.user._id, source, destination, res);
   } else if (title) {
-    updateTitle(id, title, res);
+    updateTitle(id, boardId, req.user._id, title, res);
   }
 });
 
-router.delete('/:id', validateObjectId, async (req, res) => {
+router.delete('/:id', [auth, validateObjectId], async (req, res) => {
+  const board = await Board.findOneAndUpdate(
+    {
+      _id: req.body.boardId,
+      'lists._id': req.body.listId,
+      participants: req.user._id
+    },
+    { $pull: { 'lists.$.cards': req.params.id } }
+  );
+
+  if (!board)
+    return res
+      .status(404)
+      .json({ error: 'The board with the given ID was not found.' });
+
   const card = await Card.findByIdAndRemove(req.params.id);
   if (!card)
     return res
       .status(404)
       .json({ error: 'The card with the given ID was not found.' });
-
-  await Board.findOneAndUpdate(
-    {
-      _id: card.boardId,
-      'lists._id': card.listId
-    },
-    {
-      $pull: { 'lists.$.cards': card._id }
-    }
-  );
 
   res.status(200).json({ message: 'The card was successfully deleted.' });
 });

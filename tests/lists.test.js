@@ -1,6 +1,8 @@
 const request = require('supertest');
+const bcrypt = require('bcrypt');
 const { ObjectId } = require('mongoose').Types;
 const { Board } = require('../models/board');
+const { User } = require('../models/user');
 
 let server;
 
@@ -8,23 +10,40 @@ describe('/api/lists', () => {
   const boardId = new ObjectId();
   const listId = new ObjectId();
 
-  beforeEach(async () => {
+  const password = '123456';
+  const hash = bcrypt.hashSync(password, 10);
+
+  const user = new User({
+    name: 'User Name',
+    email: 'email@domain.com',
+    password: hash
+  });
+  let token;
+
+  beforeAll(async () => {
     server = require('../server');
+    await user.save();
+    token = user.genAuthToken();
     await Board.create({
       _id: boardId,
       title: 'Board 1',
+      creator: user._id,
+      participants: user._id,
       lists: [{ _id: listId, title: 'First list' }]
     });
   });
-  afterEach(async () => {
-    server.close();
+
+  afterAll(async () => {
     await Board.deleteMany({});
+    await User.deleteMany({}); // TODO: remove users with boards
+    server.close();
   });
 
   describe('POST /', () => {
     it('should create a list if the body is valid', async () => {
       const res = await request(server)
         .post('/api/lists')
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'List 1', boardId });
 
       expect(res.status).toBe(201);
@@ -35,6 +54,7 @@ describe('/api/lists', () => {
     it('should return 400 if the title field is not specified', async () => {
       const res = await request(server)
         .post('/api/lists')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId });
 
       expect(res.status).toBe(400);
@@ -44,6 +64,7 @@ describe('/api/lists', () => {
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
         .post('/api/lists')
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'List 1', boardId: '1' });
 
       expect(res.status).toBe(404);
@@ -53,6 +74,7 @@ describe('/api/lists', () => {
     it('should return 404 if the passed board ID was not found', async () => {
       const res = await request(server)
         .post(`/api/lists`)
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'List 1', boardId: new ObjectId() });
 
       expect(res.status).toBe(404);
@@ -62,6 +84,7 @@ describe('/api/lists', () => {
     it('should return 404 if board ID is not passed', async () => {
       const res = await request(server)
         .post('/api/lists')
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'List 1' });
 
       expect(res.status).toBe(404);
@@ -69,10 +92,11 @@ describe('/api/lists', () => {
     });
   });
 
-  describe('PUT /:id', () => {
-    it('should patch the list if the list ID and the body are valid', async () => {
+  describe('PATCH /:id', () => {
+    it('should update the list if the list ID and the body are valid', async () => {
       const res = await request(server)
-        .put(`/api/lists/${listId}`)
+        .patch(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated List', boardId });
 
       expect(res.status).toBe(200);
@@ -82,7 +106,8 @@ describe('/api/lists', () => {
 
     it('should return 404 if the passed ID is invalid', async () => {
       const res = await request(server)
-        .put('/api/lists/1')
+        .patch('/api/lists/1')
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated List', boardId });
 
       expect(res.status).toBe(404);
@@ -91,7 +116,8 @@ describe('/api/lists', () => {
 
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
-        .put(`/api/lists/${listId}`)
+        .patch(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated List', boardId: '1' });
 
       expect(res.status).toBe(404);
@@ -100,7 +126,8 @@ describe('/api/lists', () => {
 
     it('should return 404 if board ID is not passed', async () => {
       const res = await request(server)
-        .put(`/api/lists/${listId}`)
+        .patch(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated List' });
 
       expect(res.status).toBe(404);
@@ -109,7 +136,8 @@ describe('/api/lists', () => {
 
     it('should return 404 if the list with the given ID was not found', async () => {
       const res = await request(server)
-        .put(`/api/lists/${new ObjectId()}`)
+        .patch(`/api/lists/${new ObjectId()}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated List', boardId });
 
       expect(res.status).toBe(404);
@@ -120,7 +148,8 @@ describe('/api/lists', () => {
 
     it('should return 400 if the title field is not specified', async () => {
       const res = await request(server)
-        .put(`/api/lists/${listId}`)
+        .patch(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId });
 
       expect(res.status).toBe(400);
@@ -132,6 +161,7 @@ describe('/api/lists', () => {
     it('should delete a list if the passed ID is valid', async () => {
       const res = await request(server)
         .delete(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId });
 
       expect(res.status).toBe(200);
@@ -141,6 +171,7 @@ describe('/api/lists', () => {
     it('should return 404 if the passed ID is invalid', async () => {
       const res = await request(server)
         .delete('/api/lists/1')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId });
 
       expect(res.status).toBe(404);
@@ -150,6 +181,7 @@ describe('/api/lists', () => {
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
         .delete(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId: '1' });
 
       expect(res.status).toBe(404);
@@ -159,6 +191,7 @@ describe('/api/lists', () => {
     it('should return 404 if board ID is not passed', async () => {
       const res = await request(server)
         .delete(`/api/lists/${listId}`)
+        .set('authorization', `Bearer ${token}`)
         .send();
 
       expect(res.status).toBe(404);
@@ -168,6 +201,7 @@ describe('/api/lists', () => {
     it('should return 404 if the list with the given ID was not found', async () => {
       const res = await request(server)
         .delete(`/api/lists/${new ObjectId()}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId });
 
       expect(res.status).toBe(404);
