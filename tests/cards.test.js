@@ -1,7 +1,9 @@
 const request = require('supertest');
+const bcrypt = require('bcrypt');
 const { ObjectId } = require('mongoose').Types;
 const { Board } = require('../models/board');
 const { Card } = require('../models/card');
+const { User } = require('../models/user');
 
 let server;
 
@@ -10,66 +12,55 @@ describe('/api/cards', () => {
   const listId1 = new ObjectId();
   const listId2 = new ObjectId();
 
-  beforeEach(async () => {
+  const password = '123456';
+  const hash = bcrypt.hashSync(password, 10);
+
+  const user = new User({
+    name: 'User Name',
+    email: 'email@domain.com',
+    password: hash
+  });
+
+  const board = new Board({
+    _id: boardId,
+    title: 'Board 1',
+    lists: [
+      { _id: listId1, title: 'First list' },
+      { _id: listId2, title: 'Second List' }
+    ],
+    creator: user._id,
+    participants: user._id
+  });
+
+  let token;
+
+  beforeAll(async () => {
     server = require('../server');
-
-    await Board.create({
-      _id: boardId,
-      title: 'Board 1',
-      lists: [
-        { _id: listId1, title: 'First list' },
-        { _id: listId2, title: 'Second List' }
-      ]
-    });
+    await user.save();
+    token = user.genAuthToken();
+    await board.save();
   });
 
-  afterEach(async () => {
-    server.close();
-    await Board.deleteMany();
+  afterAll(async () => {
     await Card.deleteMany();
-  });
-
-  describe('GET /', () => {
-    it('should get all cards for a specified board', async () => {
-      await Card.insertMany([
-        { boardId, listId: listId1, title: 'Card 1' },
-        { boardId, listId: listId1, title: 'Card 2' }
-      ]);
-      const res = await request(server)
-        .get('/api/cards/')
-        .query({ boardId: boardId.toString() });
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBeTruthy();
-      expect(res.body.some(c => c.title === 'Card 1')).toBeTruthy();
-      expect(res.body.some(c => c.title === 'Card 2')).toBeTruthy();
-    });
-
-    it('should return 404 if the passed board ID is invalid', async () => {
-      const res = await request(server)
-        .get('/api/cards')
-        .query({ boardId: '1' });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Board ID is not valid.');
-    });
-
-    it('should return 404 if board ID is not passed', async () => {
-      const res = await request(server)
-        .get('/api/cards')
-        .query();
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Board ID is required.');
-    });
+    await Board.deleteMany();
+    await User.deleteMany();
+    server.close();
   });
 
   describe('GET /:id', () => {
     it('should return a card if the passed ID is valid', async () => {
-      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
+      const card = new Card({ title: 'Card 1', boardId, listId: listId1 });
+      await Board.findOneAndUpdate(
+        { _id: boardId, lists: listId1 },
+        { $push: { 'lists.$.cards': card } }
+      );
       await card.save();
 
-      const res = await request(server).get(`/api/cards/${card._id}`);
+      const res = await request(server)
+        .get(`/api/cards/${card._id}`)
+        .set('authorization', `Bearer ${token}`)
+        .query({ boardId: boardId.toString() });
 
       expect(res.status).toBe(200);
       expect(res.body._id).toBeDefined();
@@ -77,14 +68,20 @@ describe('/api/cards', () => {
     });
 
     it('should return 404 if the passed ID is invalid', async () => {
-      const res = await request(server).get('/api/cards/1');
+      const res = await request(server)
+        .get('/api/cards/1')
+        .set('authorization', `Bearer ${token}`)
+        .query({ boardId: boardId.toString() });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('ID is not valid.');
     });
 
     it('should return 404 if the card with the given ID was not found', async () => {
-      const res = await request(server).get(`/api/cards/${new ObjectId()}`);
+      const res = await request(server)
+        .get(`/api/cards/${new ObjectId()}`)
+        .set('authorization', `Bearer ${token}`)
+        .query({ boardId: boardId.toString() });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The card with the given ID was not found.');
@@ -95,6 +92,7 @@ describe('/api/cards', () => {
     it('should create a card if body is valid', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, listId: listId1, title: 'Card 1' });
 
       expect(res.status).toBe(201);
@@ -105,6 +103,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed board ID was not found', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId: new ObjectId(), listId: listId1, title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -114,6 +113,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed list ID was not found', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, listId: new ObjectId(), title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -123,6 +123,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed board ID is invalid', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId: '1', listId: listId1, title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -132,6 +133,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed list ID is invalid', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, listId: '1', title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -141,6 +143,7 @@ describe('/api/cards', () => {
     it('should return 404 if board ID is not passed', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ listId: listId1, title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -150,6 +153,7 @@ describe('/api/cards', () => {
     it('should return 404 if list ID is not passed', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, title: 'Card 1' });
 
       expect(res.status).toBe(404);
@@ -159,6 +163,7 @@ describe('/api/cards', () => {
     it('should return 400 if the title is not specified', async () => {
       const res = await request(server)
         .post('/api/cards')
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, listId: listId1 });
 
       expect(res.status).toBe(400);
@@ -166,14 +171,15 @@ describe('/api/cards', () => {
     });
   });
 
-  describe('PUT /:id', () => {
+  describe('PATCH /:id', () => {
     it('should update the title if the ID and the body are valid', async () => {
-      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
+      const card = new Card({ title: 'Card 1' });
       await card.save();
 
       const res = await request(server)
-        .put(`/api/cards/${card._id}`)
-        .send({ title: 'Updated Title' });
+        .patch(`/api/cards/${card._id}`)
+        .set('authorization', `Bearer ${token}`)
+        .send({ boardId, title: 'Updated Title' });
 
       expect(res.status).toBe(200);
       expect(res.body._id).toBeDefined();
@@ -181,21 +187,21 @@ describe('/api/cards', () => {
     });
 
     it('should move the card if the ID, source and destination are valid', async () => {
-      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
+      const card = new Card({ title: 'Card 1' });
       await card.save();
 
       const res = await request(server)
-        .put(`/api/cards/${card._id}`)
+        .patch(`/api/cards/${card._id}`)
+        .set('authorization', `Bearer ${token}`)
         .send({
+          boardId,
           source: { listId: listId1, index: 0 },
           destination: { listId: listId2, index: 0 }
         });
 
-      expect(res.status).toBe(200);
-      expect(res.body._id).toBeDefined();
-      expect(res.body.listId.toString()).toBe(listId2.toString());
+      expect(res.status).toBe(204);
 
-      const board = await Board.findById(card.boardId);
+      const board = await Board.findById(boardId);
 
       const sourceList = board.lists.find(
         l => l._id.toString() === listId1.toString()
@@ -216,7 +222,8 @@ describe('/api/cards', () => {
 
     it('should return 404 if the card ID is invalid', async () => {
       const res = await request(server)
-        .put('/api/cards/1')
+        .patch('/api/cards/1')
+        .set('authorization', `Bearer ${token}`)
         .send({ title: 'Updated Title' });
 
       expect(res.status).toBe(404);
@@ -225,8 +232,9 @@ describe('/api/cards', () => {
 
     it('should return 404 if the card was not found', async () => {
       const res = await request(server)
-        .put(`/api/cards/${new ObjectId()}`)
-        .send({ title: 'Updated Title' });
+        .patch(`/api/cards/${new ObjectId()}`)
+        .set('authorization', `Bearer ${token}`)
+        .send({ boardId, title: 'Updated Title' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The card with the given ID was not found.');
@@ -237,7 +245,8 @@ describe('/api/cards', () => {
       await card.save();
 
       const res = await request(server)
-        .put(`/api/cards/${card._id}`)
+        .patch(`/api/cards/${card._id}`)
+        .set('authorization', `Bearer ${token}`)
         .send({ boardId, listId: listId1 });
 
       expect(res.status).toBe(400);
@@ -247,24 +256,33 @@ describe('/api/cards', () => {
 
   describe('DELETE /:id', () => {
     it('should delete a card if the passed ID is valid', async () => {
-      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
+      const card = new Card({ title: 'Card 1' });
       await card.save();
 
-      const res = await request(server).delete(`/api/cards/${card._id}`);
+      const res = await request(server)
+        .delete(`/api/cards/${card._id}`)
+        .set('authorization', `Bearer ${token}`)
+        .send({ boardId, listId: listId1 });
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe('The card was successfully deleted.');
     });
 
     it('should return 404 if the passed ID is invalid', async () => {
-      const res = await request(server).delete('/api/cards/1');
+      const res = await request(server)
+        .delete('/api/cards/1')
+        .set('authorization', `Bearer ${token}`)
+        .send({ boardId, listId: listId1 });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('ID is not valid.');
     });
 
     it('should return 404 if the card with the given ID was not found', async () => {
-      const res = await request(server).delete(`/api/cards/${new ObjectId()}`);
+      const res = await request(server)
+        .delete(`/api/cards/${new ObjectId()}`)
+        .set('authorization', `Bearer ${token}`)
+        .send({ boardId, listId: listId1 });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The card with the given ID was not found.');
