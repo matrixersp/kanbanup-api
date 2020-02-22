@@ -28,7 +28,7 @@ describe('/api/cards', () => {
       { _id: listId1, title: 'First list' },
       { _id: listId2, title: 'Second List' }
     ],
-    creator: user._id,
+    owner: user._id,
     participants: user._id
   });
 
@@ -59,8 +59,7 @@ describe('/api/cards', () => {
 
       const res = await request(server)
         .get(`/api/cards/${card._id}`)
-        .set('authorization', `Bearer ${token}`)
-        .query({ boardId: boardId.toString() });
+        .set('authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body._id).toBeDefined();
@@ -70,8 +69,7 @@ describe('/api/cards', () => {
     it('should return 404 if the passed ID is invalid', async () => {
       const res = await request(server)
         .get('/api/cards/1')
-        .set('authorization', `Bearer ${token}`)
-        .query({ boardId: boardId.toString() });
+        .set('authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('ID is not valid.');
@@ -80,8 +78,7 @@ describe('/api/cards', () => {
     it('should return 404 if the card with the given ID was not found', async () => {
       const res = await request(server)
         .get(`/api/cards/${new ObjectId()}`)
-        .set('authorization', `Bearer ${token}`)
-        .query({ boardId: boardId.toString() });
+        .set('authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The card with the given ID was not found.');
@@ -173,13 +170,13 @@ describe('/api/cards', () => {
 
   describe('PATCH /:id', () => {
     it('should update the title if the ID and the body are valid', async () => {
-      const card = new Card({ title: 'Card 1' });
+      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
       await card.save();
 
       const res = await request(server)
         .patch(`/api/cards/${card._id}`)
         .set('authorization', `Bearer ${token}`)
-        .send({ boardId, title: 'Updated Title' });
+        .send({ title: 'Updated Title' });
 
       expect(res.status).toBe(200);
       expect(res.body._id).toBeDefined();
@@ -187,19 +184,20 @@ describe('/api/cards', () => {
     });
 
     it('should move the card if the ID, source and destination are valid', async () => {
-      const card = new Card({ title: 'Card 1' });
+      const card = new Card({ boardId, listId: listId1, title: 'Card 1' });
       await card.save();
 
       const res = await request(server)
         .patch(`/api/cards/${card._id}`)
         .set('authorization', `Bearer ${token}`)
         .send({
-          boardId,
           source: { listId: listId1, index: 0 },
           destination: { listId: listId2, index: 0 }
         });
 
-      expect(res.status).toBe(204);
+      expect(res.status).toBe(200);
+      expect(res.body._id).toBeDefined();
+      expect(res.body.listId.toString()).toBe(listId2.toString());
 
       const board = await Board.findById(boardId);
 
@@ -234,7 +232,7 @@ describe('/api/cards', () => {
       const res = await request(server)
         .patch(`/api/cards/${new ObjectId()}`)
         .set('authorization', `Bearer ${token}`)
-        .send({ boardId, title: 'Updated Title' });
+        .send({ title: 'Updated Title' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The card with the given ID was not found.');
@@ -246,8 +244,7 @@ describe('/api/cards', () => {
 
       const res = await request(server)
         .patch(`/api/cards/${card._id}`)
-        .set('authorization', `Bearer ${token}`)
-        .send({ boardId, listId: listId1 });
+        .set('authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeDefined();

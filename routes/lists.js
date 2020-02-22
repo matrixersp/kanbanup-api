@@ -90,7 +90,7 @@ router.delete(
     board.lists.splice(index, 1);
 
     await board.save();
-    await Card.deleteMany({ listId }); // TODO: delete cards after deleting list
+    await Card.deleteMany({ listId });
 
     res.status(200).json({ message: 'The list was successfully deleted.' });
   }

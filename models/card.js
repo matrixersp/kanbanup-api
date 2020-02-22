@@ -5,7 +5,9 @@ const Card = model(
   'Card',
   Schema(
     {
-      title: { type: String, required: true, trim: true }
+      title: { type: String, required: true, trim: true },
+      boardId: { type: Schema.Types.ObjectId, ref: 'Board' },
+      listId: { type: Schema.Types.ObjectId, ref: 'List' }
     },
     { timestamps: true }
   )
