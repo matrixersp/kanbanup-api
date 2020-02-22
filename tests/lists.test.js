@@ -27,7 +27,7 @@ describe('/api/lists', () => {
     await Board.create({
       _id: boardId,
       title: 'Board 1',
-      creator: user._id,
+      owner: user._id,
       participants: user._id,
       lists: [{ _id: listId, title: 'First list' }]
     });

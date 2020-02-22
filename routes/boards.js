@@ -45,7 +45,7 @@ router.post('/', auth, async (req, res) => {
 
   const board = new Board({
     title: req.body.title,
-    creator: req.user._id,
+    owner: req.user._id,
     participants: req.user._id
   });
 
@@ -81,14 +81,13 @@ router.patch('/:id', auth, validateObjectId, async (req, res) => {
 router.delete('/:id', auth, validateObjectId, async (req, res) => {
   const board = await Board.findOneAndRemove({
     _id: req.params.id,
-    creator: req.user._id
+    owner: req.user._id
   });
   if (!board)
     return res
       .status(404)
       .json({ error: 'The board with the given ID was not found.' });
 
-  // TODO: Delete cards after deleting board
   res.status(200).json({ message: 'The board was successfully deleted.' });
 });
 

@@ -25,15 +25,15 @@ describe('/api/boards', () => {
   });
 
   afterAll(async () => {
-    server.close();
     await Board.deleteMany({});
-    await User.deleteMany({}); // TODO: remove user boards
+    await User.deleteMany({}); // TODO: remove user's boards
+    server.close();
   });
 
   describe('GET /', () => {
     Board.insertMany([
-      { title: 'Board 1', creator: user._id, participants: user._id },
-      { title: 'Board 2', creator: user._id, participants: user._id }
+      { title: 'Board 1', owner: user._id, participants: user._id },
+      { title: 'Board 2', owner: user._id, participants: user._id }
     ]);
 
     it('should return all boards', async () => {
@@ -52,7 +52,7 @@ describe('/api/boards', () => {
     it('should return a board if valid ID is passed', async () => {
       const board = new Board({
         title: 'Board 1',
-        creator: user._id,
+        owner: user._id,
         participants: user._id
       });
       await board.save();
@@ -101,7 +101,7 @@ describe('/api/boards', () => {
       const res = await request(server)
         .post('/api/boards')
         .set('authorization', `Bearer ${token}`)
-        .send({ title: '', creator: user._id });
+        .send({ title: '', owner: user._id });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeDefined();
@@ -112,7 +112,7 @@ describe('/api/boards', () => {
     it('should update the board if the ID and the title field are valid', async () => {
       const board = new Board({
         title: 'Board 1',
-        creator: user._id,
+        owner: user._id,
         participants: user._id
       });
       await board.save();
@@ -162,7 +162,7 @@ describe('/api/boards', () => {
 
   describe('DELETE /:id', () => {
     it('should delete a board if valid ID is passed', async () => {
-      const board = new Board({ title: 'Board 1', creator: user._id });
+      const board = new Board({ title: 'Board 1', owner: user._id });
       await board.save();
 
       const res = await request(server)

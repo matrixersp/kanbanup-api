@@ -1,22 +1,29 @@
-const { Schema, model } = require('mongoose');
+const mongoose = require('mongoose');
 const Joi = require('@hapi/joi');
 
-const ListSchema = new Schema({
+const listSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
-  cards: [{ type: Schema.Types.ObjectId, ref: 'Card' }]
+  cards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Card' }]
 });
 
-const List = model('List', ListSchema);
+const List = mongoose.model('List', listSchema);
 
-const Board = model(
-  'Board',
-  new Schema({
-    title: { type: String, required: true, trim: true },
-    lists: [ListSchema],
-    participants: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    creator: { type: Schema.Types.ObjectId, ref: 'User' }
-  })
-);
+const boardSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  lists: [listSchema],
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+boardSchema.pre('findOneAndRemove', async function(next) {
+  const boardId = this.getQuery()._id;
+
+  const Card = mongoose.model('Card');
+  await Card.deleteMany({ boardId });
+  next();
+});
+
+const Board = mongoose.model('Board', boardSchema);
 
 const objectId = Joi.extend(joi => ({
   type: 'validId',
