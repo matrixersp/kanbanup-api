@@ -2,7 +2,6 @@ require('express-async-errors');
 const express = require('express');
 
 const app = express();
-const cors = require('cors');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 const error = require('./middleware/error');
@@ -25,7 +24,19 @@ mongoose
   .then(() => console.log(`MongoDB connected on ${dbURI}`))
   .catch(err => console.log('Could not connect to MongoDB', err));
 
-app.use(cors());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
+  res.header('Access-Control-Expose-Headers', 'X-Auth-Token');
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, PATCH, DELETE');
+    return res.status(200).json({});
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(morgan('tiny'));
