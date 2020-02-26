@@ -4,10 +4,24 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const auth = require('../middleware/auth');
 const { User, validateUser } = require('../models/user');
+const { Board } = require('../models/board');
 
 router.get('/current', auth, async (req, res) => {
   const user = await User.findById(req.user._id).select('-password -__v');
-  return res.status(200).json(user);
+  console.log(user);
+
+  const currentBoard = await Board.findById(user.currentBoard).populate(
+    'lists.cards'
+  );
+  console.log(currentBoard);
+
+  return res.status(200).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    boards: user.boards,
+    currentBoard
+  });
 });
 
 router.post('/', async (req, res) => {

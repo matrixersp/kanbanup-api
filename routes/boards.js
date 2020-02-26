@@ -1,6 +1,7 @@
 const express = require('express');
 
 const router = express.Router();
+const { ObjectId } = require('mongoose').Types;
 const auth = require('../middleware/auth');
 const validateObjectId = require('../middleware/validateObjectId');
 const { Board, validateBoard } = require('../models/board');
@@ -43,12 +44,19 @@ router.post('/', auth, async (req, res) => {
       .status(404)
       .json({ message: 'The user with the given ID was not found.' });
 
+  const boardId = new ObjectId();
+
+  user.boards.push({ _id: boardId, title: req.body.title });
+  if (!user.currentBoard) user.currentBoard = boardId;
+
   const board = new Board({
+    _id: boardId,
     title: req.body.title,
     owner: req.user._id,
     participants: req.user._id
   });
 
+  await user.save();
   await board.save();
 
   res.status(201).json(board);
@@ -87,6 +95,11 @@ router.delete('/:id', auth, validateObjectId, async (req, res) => {
     return res
       .status(404)
       .json({ error: 'The board with the given ID was not found.' });
+
+  await User.update(
+    { currentBoard: req.params.id },
+    { $set: { currentBoard: null } }
+  );
 
   res.status(200).json({ message: 'The board was successfully deleted.' });
 });

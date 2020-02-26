@@ -4,6 +4,7 @@ const router = express.Router();
 const Joi = require('@hapi/joi');
 const bcrypt = require('bcrypt');
 const { User } = require('../models/user');
+const { Board } = require('../models/board');
 
 function validate(user) {
   const schema = Joi.object({
@@ -29,7 +30,7 @@ router.post('/', async (req, res) => {
   }
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).select('-__v');
   if (!user)
     return res.status(400).json({ error: 'Invalid Email or password.' });
 
@@ -37,11 +38,17 @@ router.post('/', async (req, res) => {
   if (!isValidPassword)
     return res.status(400).json({ error: 'Invalid Email or password.' });
 
+  const currentBoard = await Board.findById(user.currentBoard).populate(
+    'lists.cards'
+  );
+
   const token = user.genAuthToken();
   return res.header('x-auth-token', token).json({
     _id: user._id,
     name: user.name,
-    email: user.email
+    email: user.email,
+    boards: user.boards,
+    currentBoard
   });
 });
 
