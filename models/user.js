@@ -23,7 +23,13 @@ const userSchema = Schema(
       }
     },
     password: { type: String, minLength: 6, maxLength: 255, required: true },
-    boards: [{ type: Schema.Types.ObjectId, ref: 'Board' }]
+    boards: [
+      {
+        _id: { type: Schema.Types.ObjectId, ref: 'Board' },
+        title: { type: String, required: true, trim: true }
+      }
+    ],
+    currentBoard: { type: Schema.Types.ObjectId, ref: 'Board' }
   },
   { timestamps: true }
 );
