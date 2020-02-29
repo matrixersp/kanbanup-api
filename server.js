@@ -13,7 +13,7 @@ const auth = require('./routes/auth');
 
 require('dotenv').config();
 
-const dbURI = process.env.KANBORED_DB_URI;
+const dbURI = process.env.KANBELLO_DB_URI;
 mongoose
   .connect(dbURI, {
     useNewUrlParser: true,
