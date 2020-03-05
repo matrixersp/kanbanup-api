@@ -44,22 +44,27 @@ router.patch(
       return res.status(400).json({ errors });
     }
 
-    const query = {
+    const board = await Board.findOne({
       _id: req.body.boardId,
-      'lists._id': req.params.id,
-      participants: req.user._id
-    };
-    const update = { $set: { 'lists.$.title': req.body.title } };
-    const options = { new: true };
-
-    const board = await Board.findOneAndUpdate(query, update, options);
-
+      'lists._id': req.params.id
+    });
     if (!board)
       return res
         .status(404)
         .json({ error: 'The list with the given ID was not found.' });
 
-    const list = board.lists.find(l => req.params.id === l._id.toString());
+    const index = board.lists.findIndex(
+      l => req.params.id === l._id.toString()
+    );
+    if (index === -1)
+      return res
+        .status(404)
+        .json({ error: 'The list with the given ID was not found.' });
+
+    const list = board.lists[index];
+    list.title = req.body.title;
+
+    await board.save();
 
     res.status(200).json(list);
   }
