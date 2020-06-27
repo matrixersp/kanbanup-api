@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const app = require('./app');
 require('dotenv').config();
 
-const dbURI = process.env.KANBELLO_DB_URI;
+const dbURI = process.env.KANBANUP_DB_URI;
 mongoose
   .connect(dbURI, {
     useNewUrlParser: true,

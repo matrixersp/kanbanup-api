@@ -1,4 +1,4 @@
-# Kanbello API
+# KanbanUp API
 
 A Kanban Board RESTful API.
 
@@ -7,8 +7,8 @@ A Kanban Board RESTful API.
 ## Quick Start
 
 ```sh
-git clone git@github.com:matrixersp/kanbello-api.git
-cd kanbello-api
+git clone git@github.com:matrixersp/kanbanup-api.git
+cd kanbanup-api
 cp .env.example .env
 npm install
 npm start
@@ -26,4 +26,4 @@ Contributions are welcome and greatly appreciated, via issues and/or pull reques
 
 ## License
 
-Licensed under the [MIT license](https://github.com/matrixersp/kanbello-api/blob/master/LICENSE).
+Licensed under the [MIT license](https://github.com/matrixersp/kanbanup-api/blob/master/LICENSE).
