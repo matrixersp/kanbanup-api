@@ -9,7 +9,7 @@ A Kanban Board RESTful API.
 ```sh
 git clone git@github.com:matrixersp/kanbanup-api.git
 cd kanbanup-api
-cp .env.example .env
+cp .env.example .env.local
 npm install
 npm start
 ```
